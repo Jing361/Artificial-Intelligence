@@ -40,8 +40,8 @@ class aStarRobot(DiscreteRobot):
     print(self.bfs(node))
 
   def isGoal(self, node):
-    state, path = node
-    return goal == len(state[1])
+    loc, dirt, path = node
+    return self.goal == len(dirt)
 
   def actNew(self, state, d):
     copy = state[:]
@@ -50,21 +50,22 @@ class aStarRobot(DiscreteRobot):
     newDirt = dirt[:]
     # Up
     if d == 1:
-        newLoc = loc[0], loc[1] - 1
+      newLoc = loc[0], loc[1] - 1
     # Down
     elif d == 2:
-        newLoc = loc[0], loc[1] + 1
+      newLoc = loc[0], loc[1] + 1
     # Left
     elif d == 3:
-        newLoc = loc[0] - 1, loc[1]
+      newLoc = loc[0] - 1, loc[1]
     # Right
     elif d == 4:
-        newLoc = loc[0] + 1, loc[1]
+      newLoc = loc[0] + 1, loc[1]
 
-    if math.floor(newLoc) in newDirt:
-      newDirt.remove(newLoc)
+    flatLoc = (math.floor(newLoc[0]), math.floor(newLoc[1]))
+    if flatLoc in newDirt:
+      newDirt.remove(flatLoc)
 
-    copy = newLoc, newDirt
+    copy = [newLoc, newDirt]
     return copy
 
   def h(self):# Heuristic
@@ -72,30 +73,37 @@ class aStarRobot(DiscreteRobot):
 
   def generateSuccessors(self, node):
     loc, dirt, path = node
-    state = (loc, dirt)
+    state = [loc, dirt]
     ret = []
     # Up
     if loc[1] > 1:
       newloc = 1
-      ret.append((self.actNew(state, newloc), path + 'u'))
+      app = self.actNew(state, newloc)
+      app.append(path + 'u')
+      ret.append(app)
     # Down
     if loc[1] < self.getRoomHeight():
       newloc = 2
-      ret.append((self.actNew(state, newloc), path + 'd'))
+      app = self.actNew(state, newloc)
+      app.append(path + 'd')
+      ret.append(app)
     # Left
     if loc[0] > 1:
       newloc = 3
-      ret.append((self.actNew(state, newloc), path + 'l'))
+      app = self.actNew(state, newloc)
+      app.append(path + 'l')
+      ret.append(app)
     # Right
     if loc[0] > self.getRoomWidth():
       newloc = 4
-      ret.append((self.actNew(state, newloc), path + 'r'))
-
+      app = self.actNew(state, newloc)
+      app.append(path + 'r')
+      ret.append(app)
     return ret
 
   def getHash(self, node):
     loc, dirt, path = node
-    state = (loc, dirt)
+    state = [loc, dirt]
     return str(state)
 
   def Astar(self, node):
@@ -112,7 +120,7 @@ class aStarRobot(DiscreteRobot):
       for newnode in self.generateSuccessors(thisnode):
         if self.getHash(newnode) in explored:
           continue;
-        if isGoal(newnode):
+        if self.isGoal(newnode):
           return (newnode, maxexplored, expansions)
         frontier.insert(0, newnode)
         if maxexplored < len(explored):
@@ -134,9 +142,9 @@ class aStarRobot(DiscreteRobot):
           continue;
         if self.getHash(newnode) in explored:
           continue;
-        if isGoal(newnode):
+        if self.isGoal(newnode):
           return (newnode, maxexplored, expansions)
-        frontier.append(0, newnode)
+        frontier.append(newnode)
         if maxexplored < len(explored):
           maxexplored = len(explored)
 
@@ -154,7 +162,7 @@ class aStarRobot(DiscreteRobot):
       for newnode in self.generateSuccessors(thisnode):
         if self.getHash(newnode) in explored:
           continue;
-        if isGoal(newnode):
+        if self.isGoal(newnode):
           return (newnode, maxexplored, expansions)
         frontier.insert(0, newnode)
         if maxexplored < len(explored):
@@ -214,6 +222,8 @@ mediumWalls5Room.setWall((26,25), (7,25))
 mediumWalls5Room.setWall((7,5), (7,22))
 allRooms.append(mediumWalls5Room) # [7]
 
+boopRoom = RectangularRoom(5,5, .5)
+
 #############################################    
 def aStar():
   print(runSimulation(num_trials = 2,
@@ -222,14 +232,19 @@ def aStar():
                     ui_enable = False,
                     ui_delay = 0.01))
                     
-                    
+def test():
+    print(runSimulation(num_trials = 1,
+                        room = boopRoom,
+                        robot_type = aStarRobot,
+                        ui_enable = False))
 
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
+  test()
   #aStar()
   
   # Concurrent test execution.
   #concurrent_test(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 10)
-  testAllMaps(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 2)
+  #testAllMaps(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 2)
 
