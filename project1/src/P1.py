@@ -8,6 +8,7 @@
 from roomba_sim import *
 from roomba_concurrent import *
 
+import time
 
 class aStarRobot(DiscreteRobot):
   # A state is represented as a location, and the positions of dirty tiles
@@ -18,111 +19,86 @@ class aStarRobot(DiscreteRobot):
   # The goal state is any location, and an empty list of dirty tiles
   # [(xr, yr), []]
 
-  goal = 0
-
   def initialize(self, chromosome):
-    self.state = None
-    loc = self.getRobotPosition()
-    dirt = []
-    for spot in self.getDirty():
-        dirt.append(spot)
-    path = ''
-    node = [loc, dirt, path]
-    print("print(loc)")
-    print(loc)
-    print("print(dirt)")
-    print(dirt)
-    print("print(path)")
-    print(path)
-    print("print(node)")
-    print(node)
-    print("print(bfs(node))")
-    print(self.bfs(node))
+    self.actionlist = []
+    x, y = self.getRobotPosition()
+    state = ((int(x), int(y)), self.getDirty())
+    node = ([], state)
+    actionList, state = self.Astar(node)
+    actionList.reverse()
+    self.actionlist = actionList
 
-  def isGoal(self, node):
-    loc, dirt, path = node
-    return self.goal == len(dirt)
+  def runRobot(self):
+    self.action = self.actionlist.pop()
 
-  def actNew(self, state, d):
-    copy = state[:]
-    loc, dirt = copy
-    newLoc = ()
-    newDirt = dirt[:]
-    # Up
-    if d == 1:
-      newLoc = loc[0], loc[1] - 1
-    # Down
-    elif d == 2:
-      newLoc = loc[0], loc[1] + 1
-    # Left
-    elif d == 3:
-      newLoc = loc[0] - 1, loc[1]
-    # Right
-    elif d == 4:
-      newLoc = loc[0] + 1, loc[1]
+  def h(self, node):# Heuristic
+    actionList, state = node
+    position, dirtList = state
+    numDirt = len(dirtList) + len(actionList)*0.1
+    return numDirt
 
-    flatLoc = (math.floor(newLoc[0]), math.floor(newLoc[1]))
-    if flatLoc in newDirt:
-      newDirt.remove(flatLoc)
-
-    copy = [newLoc, newDirt]
-    return copy
-
-  def h(self):# Heuristic
-    return len(self.getDirty())
-
-  def generateSuccessors(self, node):
-    loc, dirt, path = node
-    state = [loc, dirt]
-    ret = []
-    # Up
-    if loc[1] > 1:
-      newloc = 1
-      app = self.actNew(state, newloc)
-      app.append(path + 'u')
-      ret.append(app)
-    # Down
-    if loc[1] < self.getRoomHeight():
-      newloc = 2
-      app = self.actNew(state, newloc)
-      app.append(path + 'd')
-      ret.append(app)
-    # Left
-    if loc[0] > 1:
-      newloc = 3
-      app = self.actNew(state, newloc)
-      app.append(path + 'l')
-      ret.append(app)
-    # Right
-    if loc[0] > self.getRoomWidth():
-      newloc = 4
-      app = self.actNew(state, newloc)
-      app.append(path + 'r')
-      ret.append(app)
-    return ret
+  def generateSuccessors(self, fNode):
+    children = []
+    hVal, node = fNode
+    actionList, state = node
+    position, dirtList = state
+    wallList = self.getWalls()
+    x, y = position
+    north = (int(x), int(y + 1))
+    south = (int(x), int(y - 1))
+    east =  (int(x + 1), int(y))
+    west =  (int(x - 1), int(y))
+    if position in dirtList:
+      newCleaned = dirtList.copy()
+      newCleaned.remove(position)
+      stateSu = (position, newCleaned)
+      nodeSu = (actionList + ['Suck'], stateSu)
+      return [nodeSu]
+    if north not in wallList:
+      stateN = (north, dirtList)
+      nodeN = (actionList + ['North'], stateN)
+      children.append(nodeN)
+    if south not in wallList:
+      stateS = (south, dirtList)
+      nodeS = (actionList + ['South'], stateS)
+      children.append(nodeS)
+    if east not in wallList:
+      stateE = (east, dirtList)
+      nodeE = (actionList + ['East'], stateE)
+      children.append(nodeE)
+    if west not in wallList:
+      stateW = (west, dirtList)
+      nodeW = (actionList + ['West'], stateW)
+      children.append(nodeW)
+    return children
 
   def getHash(self, node):
-    loc, dirt, path = node
-    state = [loc, dirt]
-    return str(state)
+    aList, state = node
+    position, dirtList = state
+    h = hash(frozenset(dirtList))
+    return(str(position) + str(h))
 
   def Astar(self, node):
-    frontier = [node]
-    explored = {}
+    frontier = [(self.h(node), node)]
+    explored = []
     maxexplored = 0
     expansions = 0
-    while (1):
-      if len(frontier) == 0:
-        return None
-      thisnode = frontier.pop()
-      explored[self.getHash(thisnode)] = 1
+    while (not len(frontier) == 0):
       expansions += 1
-      for newnode in self.generateSuccessors(thisnode):
-        if self.getHash(newnode) in explored:
-          continue;
-        if self.isGoal(newnode):
-          return (newnode, maxexplored, expansions)
-        frontier.insert(0, newnode)
+      thisnode = frontier.pop()
+      if thisnode == None:
+        print("Broke, bad node")
+        return None
+      hVal, nNode = thisnode
+      aList, state = nNode
+      explored.append(self.getHash(nNode))
+      position, dirt = state
+      if len(dirt) == 0:
+        return nNode
+      for child in self.generateSuccessors(thisnode):
+        if self.getHash(child) in explored:
+          continue
+        frontier.insert(1, (self.h(child), child))
         if maxexplored < len(explored):
           maxexplored = len(explored)
   
@@ -150,33 +126,27 @@ class aStarRobot(DiscreteRobot):
 
   def bfs(self, node):
     frontier = [node]
-    explored = {}
+    explored = []
     maxexplored = 0
     expansions = 0
-    while (1):
+    while (not len(frontier) == 0):
       if len(frontier) == 0:
+        print("Broken, frontier is zero")
         return None
       thisnode = frontier.pop()
-      explored[self.getHash(thisnode)] = 1
+      if thisnode == None:
+        print("Broken, new node is invalid")
+        return None
+      explored.append(self.getHash(thisnode))
       expansions += 1
       for newnode in self.generateSuccessors(thisnode):
         if self.getHash(newnode) in explored:
           continue;
         if self.isGoal(newnode):
           return (newnode, maxexplored, expansions)
-        frontier.insert(0, newnode)
+        frontier.insert(1, newnode)
         if maxexplored < len(explored):
           maxexplored = len(explored)
-
-  def runRobot(self):
-    #if self.state == None:
-    #  self.state = 
-    (bstate, dirt) = self.percepts
-    # Do lots of robot stuff here!
-    if dirt:
-      self.action = 'Suck'
-    else:
-        self.action = random.choice(['North','South','East','West','Suck'])
     
 ############################################
 ## A few room configurations
@@ -222,22 +192,21 @@ mediumWalls5Room.setWall((26,25), (7,25))
 mediumWalls5Room.setWall((7,5), (7,22))
 allRooms.append(mediumWalls5Room) # [7]
 
-boopRoom = RectangularRoom(5,5, .5)
+boopRoom = RectangularRoom(2, 2, .5)
 
 #############################################    
 def aStar():
   print(runSimulation(num_trials = 2,
                     room = allRooms[0],
                     robot_type = aStarRobot,
-                    ui_enable = False,
+                    ui_enable = True,
                     ui_delay = 0.01))
                     
 def test():
     print(runSimulation(num_trials = 1,
                         room = boopRoom,
                         robot_type = aStarRobot,
-                        ui_enable = False))
-
+                        ui_enable = True))
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
