@@ -20,7 +20,7 @@ def same_col(i, j):
  
 def same_block(i, j):
   #print("block check")
-  return ((i/27 == j/27) and (i%9/3 == j%9/3))
+  return (i/27 == j/27) and (i%9/3 == j%9/3)
 
 def generateSuccessors(a):
   #print("generatin' dem successors")
@@ -35,13 +35,6 @@ def generateSuccessors(a):
       excluded.append(a[j])
 
   for n in '123456789':
-    for j in range(81):
-      if same_row(i, j) and n == a[j]:
-        excluded.append(n)
-      if same_col(i, j) and n == a[j]:
-        excluded.append(n)
-      if same_block(i, j) and n == a[j]:
-        excluded.append(n)
     if n not in excluded:
       res = a.replace('.', n, 1)
       ret.append(res)
@@ -109,9 +102,10 @@ def r(a):
       excluded_numbers.add(a[j])
   for m in '123456789':
     if m not in excluded_numbers:
-      r(a[:i]+m+a[i+1])
+      r(a[:i]+m+a[i+1:])
 
-def backtracking-search(csp):
+'''
+def backtrackingSearch(csp):
   return recursiveBacktracking({}, csp)
 
 def recursiveBacktracking(assignment, csp)
@@ -126,6 +120,7 @@ def recursiveBacktracking(assignment, csp)
         return result
       del assignment[var]
   return 'fail'
+'''
 
 ############################################
 ## A few grid configurations
@@ -137,12 +132,16 @@ state1 = '759.4....68.5...4..3.2.95..56.1..9....3...1....1..6.37..53.7.9..7...8.
 def main(gridFile):
   f = open(gridFile, 'r')
   grid = f.read().replace('\n', '')
+  f.close()
   print("starting")
   print("========")
   print(grid)
   print("result")
   print("======")
-  print(astar(grid))
+  result = r(grid)
+  print(result)
+  f = open(gridFile[:len(gridFile)-4]+'_sol.txt','w')
+  f.close()
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
