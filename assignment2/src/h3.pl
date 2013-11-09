@@ -69,14 +69,16 @@ fly(newport, circleville, 16, 17).
 
 % find a flight such that we leave after Start and reach before Stop.
 fly(City1, City2, Start, Stop):-
-%    Y>=Start,
-%    R=<Stop,
-%    W>=Z,
-    fly(City1, X, Y, Z),
-    fly(X, City2, W, R).
+    City1\=City2,
+    fly(City1, MidCity, Y, Z),
+    fly(MidCity, City2, W, R),
+    Y>=Start,
+    R=<Stop,
+    W>=Z.
 
 % flights can be found using connections, with no time restrictions.
-%fly(City1, City2):-
-%    fly(City1, X, Y, Z),
-%    fly(X, City2, W, R).
+fly(City1, City2):-
+    City1\=City2,
+    fly(City1, MidCity, Y, Z),
+    fly(MidCity, City2, W, R).
 
